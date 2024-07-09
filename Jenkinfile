@@ -51,12 +51,18 @@ pipeline {
             }
         }
     }
-post{
-success {
-		mail bcc: '',body: 'Congratulations! Pipeline has been build successfully', cc: '', from: 'deepanshu.goswami95@gmail.com', replyTo: '',subject: 'Jenkins Pipeline Status', to: 'Deepanshu.goswami95@gmail.com'
-		}
-failure {
-		mail bcc: '',body: 'Oops! Your Pipeline is failed. Try again.', cc: '', from: 'deepanshu.goswami95@gmail.com', replyTo: '',subject: 'Jenkins Pipeline Status', to: 'Deepanshu.goswami95@gmail.com'
-		}
+ post {
+        success {
+            echo 'Pipeline succeeded!!'
+            mail to: 'Deepanshu.goswami95@gmail.com',
+                 subject: "CI-Pipeline Succeeded: ${currentBuild.fullDisplayName}",
+                 body: "Congratulations! The pipeline ${env.BUILD_URL} has successfully completed."
+        }
+        failure {
+            echo 'Pipeline failed!'
+            mail to: 'Deepanshu.goswami95@gmail.com',
+                 subject: "CI-Pipeline Failed: ${currentBuild.fullDisplayName}",
+                 body: "Oops! The pipeline ${env.BUILD_URL} has failed. Check the logs for details.Try Again"
+        }
     }
 }
