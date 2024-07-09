@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-deployment1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-pod-deploy
+  template:
+    metadata:
+      name: my-pod
+      labels:
+        app: my-pod-deploy
+    spec:
+      containers:
+        - name: my-container
+          image: asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new:latest
+          ports:
+            - containerPort: 8080
+
+--- # Services
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: deployment-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: my-pod-deploy
+  ports:
+    - port: 8080
+      targetPort: 8080
+
+    
+    

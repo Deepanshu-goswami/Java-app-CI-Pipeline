@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    tools {
+        maven 'maven'
+    }
+    environment {
+        SCANNER_HOME=tool 'SonarQube Scanner'
+        DOCKER_CRED    = credentials('DOCKER')
+    }
+    stages {
+        stage('gitclone') {
+            steps {
+                 git url: 'https://github.com/rajat11299/end-to-end-cicd.git' , branch: 'main'
+            }
+        }
+        stage('Maven Build') {
+            steps {
+                // Define steps for the Build stage
+                echo 'Building the project...'
+                sh 'mvn clean package'
+            }
+        }
+        stage('sonarqube-analysis') {
+            steps {
+                withSonarQubeEnv('sonarQube-server') {
+                 sh 'mvn clean verify sonar:sonar \
+                    -Dsonar.projectKey=rajat \
+                    -Dsonar.host.url=http://34.125.125.40:9000 \
+                    -Dsonar.login=squ_c7a0f151c105b6a5f06b008331cf7382283cb950'
+                }
+            }
+        }
+        stage('Docker Image Creation') {
+            steps {
+                // Define steps for the image build
+                echo 'Image building...'
+                sh 'docker build -t asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new .'
+            }
+        }
+        stage('Trivy Image Scanning'){
+            steps{
+                sh 'trivy image asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new:latest'
+            }
+        }
+        stage('Image pushing to Google Artifact') {
+            steps {
+                // Define steps for the image push...
+                echo 'Image pushing...'
+                sh 'gcloud auth configure-docker \
+                    asia-east1-docker.pkg.dev'
+                sh 'docker push asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new'
+                
+            }
+        }
+    }
+}
