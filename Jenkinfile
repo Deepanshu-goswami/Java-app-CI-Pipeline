@@ -3,54 +3,60 @@ pipeline {
     tools {
         maven 'maven'
     }
-    environment {
-        SCANNER_HOME=tool 'SonarQube Scanner'
-        DOCKER_CRED    = credentials('DOCKER')
-    }
-    stages {
-        stage('gitclone') {
+     stages {
+        stage('Cloning code from GitHub') {
             steps {
-                 git url: 'https://github.com/rajat11299/end-to-end-cicd.git' , branch: 'main'
+                 git url: 'https://github.com/Deepanshu-goswami/java-app.git' , branch: 'main'
             }
         }
-        stage('Maven Build') {
+        stage('Application building with Maven') {
             steps {
                 // Define steps for the Build stage
                 echo 'Building the project...'
                 sh 'mvn clean package'
             }
         }
-        stage('sonarqube-analysis') {
-            steps {
-                withSonarQubeEnv('sonarQube-server') {
-                 sh 'mvn clean verify sonar:sonar \
-                    -Dsonar.projectKey=rajat \
-                    -Dsonar.host.url=http://34.125.125.40:9000 \
-                    -Dsonar.login=squ_c7a0f151c105b6a5f06b008331cf7382283cb950'
+        stage('Code Analysis with Sonarqube') {
+           steps{
+            script{
+               withSonarQubeEnv(installationName: 'sonar-10', credentialsId: 'jenkins')
+                {
+                  sh 'mvn sonar:sonar'
                 }
+               
             }
+         }
+                
         }
-        stage('Docker Image Creation') {
-            steps {
-                // Define steps for the image build
-                echo 'Image building...'
-                sh 'docker build -t asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new .'
-            }
+    	stage('Building our image with Docker') {
+		 steps{                
+	        sh 'docker build -t java-application-new:$BUILD_NUMBER .'           
+             echo 'Build Image Completed'                
+             }
         }
-        stage('Trivy Image Scanning'){
+        stage('Image Scanning with Trivy'){
             steps{
-                sh 'trivy image asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new:latest'
+                sh 'trivy image java-application-new:$BUILD_NUMBER'
             }
         }
-        stage('Image pushing to Google Artifact') {
+        stage('Image pushing to Google Artifact Registry') {
             steps {
                 // Define steps for the image push...
                 echo 'Image pushing...'
                 sh 'gcloud auth configure-docker \
-                    asia-east1-docker.pkg.dev'
-                sh 'docker push asia-east1-docker.pkg.dev/charged-gravity-425405-j6/docker-image/java-application-new'
+                    asia-south2-docker.pkg.dev'
+                sh'docker tag java-application-new:$BUILD_NUMBER asia-south2-docker.pkg.dev/vishwas-426408/jenkins-repo/java-application-new:$BUILD_NUMBER'
+                sh 'docker push asia-south2-docker.pkg.dev/vishwas-426408/jenkins-repo/java-application-new:$BUILD_NUMBER'
                 
             }
         }
+    }
+post{
+success {
+		mail bcc: '',body: 'Congratulations! Pipeline has been build successfully', cc: '', from: 'deepanshu.goswami95@gmail.com', replyTo: '',subject: 'Jenkins Pipeline Status', to: 'Deepanshu.goswami95@gmail.com'
+		}
+failure {
+		mail bcc: '',body: 'Oops! Your Pipeline is failed. Try again.', cc: '', from: 'deepanshu.goswami95@gmail.com', replyTo: '',subject: 'Jenkins Pipeline Status', to: 'Deepanshu.goswami95@gmail.com'
+		}
     }
 }
